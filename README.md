@@ -176,7 +176,7 @@ Tenho facilidade em **resolver problemas complexos, aprender novas tecnologias r
 
 - LinkedIn: [linkedin.com/in/tiago-matias-dias/](https://www.linkedin.com/in/tiago-matias-dias/)  
 - E-mail: **tiagomatiasdias@hotmail.com**  
-- Portfólio no GitHub: [github.com/seuperfil](https://github.com/seuperfil)  
+- Portfólio no GitHub: [github.com/TiagoMatiasDias](https://github.com/TiagoMatiasDias/)  
 
 ---
 
