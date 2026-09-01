@@ -1,0 +1,14 @@
+{
+  "name": "bolao-brasileiro",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bolão do Campeonato Brasileiro - app de palpites com pontuação em tempo real",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "scoring:test": "pnpm --filter @bolao/scoring test",
+    "backend:dev": "pnpm --filter @bolao/backend dev",
+    "mobile:start": "pnpm --filter @bolao/mobile start"
+  }
+}

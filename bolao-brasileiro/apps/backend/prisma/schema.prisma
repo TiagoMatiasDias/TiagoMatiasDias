@@ -1,0 +1,186 @@
+// Schema de produção do backend. O servidor de desenvolvimento (src/server.ts)
+// roda hoje com um repositório em memória (src/store) para não depender de um
+// Postgres provisionado. Este schema é o próximo passo: trocar o store em
+// memória por Prisma + Postgres seguindo este modelo (ver README).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  avatarUrl       String?
+  createdAt       DateTime         @default(now())
+  bets            Bet[]
+  longTermAnswers LongTermAnswer[]
+  poolMemberships PoolMember[]
+}
+
+model Championship {
+  id                String             @id @default(uuid())
+  name              String
+  season            Int
+  teams             Team[]
+  matches           Match[]
+  longTermQuestions LongTermQuestion[]
+  pools             Pool[]
+}
+
+model Team {
+  id             String        @id @default(uuid())
+  name           String
+  shortName      String
+  crestUrl       String?
+  championshipId String
+  championship   Championship  @relation(fields: [championshipId], references: [id])
+  homeMatches    Match[]       @relation("HomeTeam")
+  awayMatches    Match[]       @relation("AwayTeam")
+  standing       StandingEntry?
+}
+
+model StandingEntry {
+  id           String   @id @default(uuid())
+  teamId       String   @unique
+  team         Team     @relation(fields: [teamId], references: [id])
+  position     Int
+  points       Int
+  played       Int
+  won          Int
+  drawn        Int
+  lost         Int
+  goalsFor     Int
+  goalsAgainst Int
+  updatedAt    DateTime @updatedAt
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+}
+
+model Match {
+  id                  String       @id @default(uuid())
+  championshipId      String
+  championship        Championship @relation(fields: [championshipId], references: [id])
+  round               Int
+  kickoffAt           DateTime
+  status              MatchStatus  @default(SCHEDULED)
+  homeTeamId          String
+  awayTeamId          String
+  homeTeam            Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam            Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeGoals           Int          @default(0)
+  awayGoals           Int          @default(0)
+  minute              Int          @default(0)
+  // Bônus de dificuldade por lado, calculado a partir da classificação no
+  // momento em que a partida é criada/atualizada (ver @bolao/scoring).
+  homeDifficultyBonus Int          @default(0)
+  drawDifficultyBonus Int          @default(0)
+  awayDifficultyBonus Int          @default(0)
+  bets                Bet[]
+  events              MatchEvent[]
+}
+
+enum MatchEventType {
+  GOAL
+  OWN_GOAL
+  PENALTY_GOAL
+  VAR_DISALLOWED
+  MATCH_FINISHED
+}
+
+model MatchEvent {
+  id        String         @id @default(uuid())
+  matchId   String
+  match     Match          @relation(fields: [matchId], references: [id])
+  type      MatchEventType
+  minute    Int
+  teamId    String?
+  createdAt DateTime       @default(now())
+}
+
+model Pool {
+  id             String       @id @default(uuid())
+  name           String
+  inviteCode     String       @unique
+  championshipId String
+  championship   Championship @relation(fields: [championshipId], references: [id])
+  members        PoolMember[]
+  createdAt      DateTime     @default(now())
+}
+
+model PoolMember {
+  id       String   @id @default(uuid())
+  poolId   String
+  pool     Pool     @relation(fields: [poolId], references: [id])
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+
+  @@unique([poolId, userId])
+}
+
+model Bet {
+  id                     String   @id @default(uuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id])
+  matchId                String
+  match                  Match    @relation(fields: [matchId], references: [id])
+  poolId                 String?
+  homeGoals              Int
+  awayGoals              Int
+  fixedPoints            Int?
+  outcomeDifficultyBonus Int?
+  fourPlusGoalsBonus     Int?
+  totalPoints            Int?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([userId, matchId, poolId])
+}
+
+model LongTermQuestion {
+  id              String           @id @default(uuid())
+  championshipId  String
+  championship    Championship     @relation(fields: [championshipId], references: [id])
+  title           String
+  description     String?
+  pointsIfCorrect Int
+  closesAt        DateTime
+  correctOptionId String?
+  options         LongTermOption[]
+  answers         LongTermAnswer[]
+}
+
+model LongTermOption {
+  id         String           @id @default(uuid())
+  questionId String
+  question   LongTermQuestion @relation(fields: [questionId], references: [id])
+  label      String
+  answers    LongTermAnswer[]
+}
+
+model LongTermAnswer {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  questionId String
+  question   LongTermQuestion @relation(fields: [questionId], references: [id])
+  optionId   String
+  option     LongTermOption   @relation(fields: [optionId], references: [id])
+  points     Int?
+  createdAt  DateTime         @default(now())
+
+  @@unique([userId, questionId])
+}
