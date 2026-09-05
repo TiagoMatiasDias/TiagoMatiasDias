@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { computeOutcomeDifficultyBonus } from "@bolao/scoring";
+import { computeOutcomeDifficultyBonus, DEFAULT_ELO, updateElo } from "@bolao/scoring";
 import type {
   Bet,
   LongTermAnswer,
@@ -63,10 +63,44 @@ export const teams: Team[] = CLUB_NAMES.map(([name, shortName], index) => {
 
 const teamsById = new Map(teams.map((t) => [t.id, t]));
 
+/**
+ * Rating de força de cada time (ver `@bolao/scoring/elo`). Ao contrário da
+ * posição na tabela, não reseta a cada rodada — evolui aos poucos conforme
+ * os jogos terminam (ver `recordMatchResultForElo`). A semente inicial abaixo
+ * é só um placeholder de demonstração; numa integração real valeria semear
+ * com o Elo final da temporada anterior.
+ */
+const eloByTeamId = new Map<string, number>(
+  teams.map((team, index) => [team.id, DEFAULT_ELO + (9 - index) * 20])
+);
+
 function difficultyBonusFor(homeTeamId: string, awayTeamId: string) {
-  const home = teamsById.get(homeTeamId)!;
-  const away = teamsById.get(awayTeamId)!;
-  return computeOutcomeDifficultyBonus(home.position, away.position, teams.length);
+  return computeOutcomeDifficultyBonus(
+    eloByTeamId.get(homeTeamId) ?? DEFAULT_ELO,
+    eloByTeamId.get(awayTeamId) ?? DEFAULT_ELO
+  );
+}
+
+/**
+ * Atualiza o Elo dos dois times a partir do resultado final de uma partida.
+ * Chamado quando uma partida termina (ver `liveEngine.ts`) — afeta o bônus
+ * de dificuldade calculado para os PRÓXIMOS jogos desses times, nunca o da
+ * partida que acabou de terminar (o bônus de uma partida é fixado quando ela
+ * é criada, como a linha de uma casa de apostas antes do apito inicial).
+ */
+export function recordMatchResultForElo(match: Match) {
+  const eloHome = eloByTeamId.get(match.homeTeamId) ?? DEFAULT_ELO;
+  const eloAway = eloByTeamId.get(match.awayTeamId) ?? DEFAULT_ELO;
+
+  const updated = updateElo({
+    eloHome,
+    eloAway,
+    homeGoals: match.homeGoals,
+    awayGoals: match.awayGoals,
+  });
+
+  eloByTeamId.set(match.homeTeamId, updated.eloHome);
+  eloByTeamId.set(match.awayTeamId, updated.eloAway);
 }
 
 function makeMatch(round: number, homeTeamId: string, awayTeamId: string, hoursFromNow: number): Match {

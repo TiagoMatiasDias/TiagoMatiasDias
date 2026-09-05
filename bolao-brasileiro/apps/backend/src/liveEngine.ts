@@ -2,13 +2,17 @@ import type { Server } from "socket.io";
 import type { ClientToServerEvents, LeaderboardEntry, ServerToClientEvents } from "@bolao/shared-types";
 import { MockLiveProvider } from "./liveProvider/mockProvider.js";
 import { leaderboardEntries, recomputeBetsForMatch } from "./services/scoringService.js";
-import { users } from "./store.js";
+import { recordMatchResultForElo, users } from "./store.js";
 
 export function startLiveEngine(io: Server<ClientToServerEvents, ServerToClientEvents>) {
   const provider = new MockLiveProvider();
 
-  provider.start(({ match }) => {
+  provider.start(({ match, justFinished }) => {
     io.emit("match:update", match);
+
+    if (justFinished) {
+      recordMatchResultForElo(match);
+    }
 
     const changedBets = recomputeBetsForMatch(match.id);
     for (const bet of changedBets) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateMatchBetScore, calculateFixedCategory } from "./matchScore.js";
 import { computeOutcomeDifficultyBonus } from "./difficultyBonus.js";
+import { expectedScore, updateElo } from "./elo.js";
 import { calculateLongTermQuestionScore } from "./longTermQuestion.js";
 
 describe("calculateFixedCategory", () => {
@@ -126,25 +127,67 @@ describe("calculateMatchBetScore - bônus de 4+ gols", () => {
 });
 
 describe("computeOutcomeDifficultyBonus", () => {
-  it("reproduz o exemplo do enunciado: líder (1º) x lanterna (20º) em campeonato de 20 times", () => {
-    const bonus = computeOutcomeDifficultyBonus(1, 20, 20);
+  it("reproduz o exemplo do enunciado com uma diferença de Elo de 400 pontos", () => {
+    const bonus = computeOutcomeDifficultyBonus(1700, 1300);
     expect(bonus).toEqual({ home: 2, draw: 4, away: 8 });
   });
 
-  it("times com posições iguais não geram bônus (jogo equilibrado)", () => {
-    const bonus = computeOutcomeDifficultyBonus(5, 5, 20);
+  it("times com Elo igual não geram bônus (jogo equilibrado)", () => {
+    const bonus = computeOutcomeDifficultyBonus(1500, 1500);
     expect(bonus).toEqual({ home: 0, draw: 0, away: 0 });
   });
 
   it("visitante favorito inverte os lados do bônus", () => {
-    const bonus = computeOutcomeDifficultyBonus(20, 1, 20);
+    const bonus = computeOutcomeDifficultyBonus(1300, 1700);
     expect(bonus).toEqual({ home: 8, draw: 4, away: 2 });
+  });
+
+  it("dois favoritos ao título com Elo parecido geram bônus baixo, mesmo em posições opostas na tabela", () => {
+    // Cenário do enunciado: dois candidatos ao título se enfrentam cedo no
+    // campeonato; um está em 1º e outro em último por causa de poucos jogos,
+    // mas a força real dos dois (Elo) é praticamente a mesma.
+    const bonus = computeOutcomeDifficultyBonus(1620, 1600);
+    expect(bonus.home).toBeLessThanOrEqual(1);
+    expect(bonus.away).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("elo", () => {
+  it("expectedScore é 0.5 para times com o mesmo rating", () => {
+    expect(expectedScore(1500, 1500)).toBeCloseTo(0.5);
+  });
+
+  it("expectedScore favorece o time com Elo maior", () => {
+    expect(expectedScore(1700, 1300)).toBeGreaterThan(0.5);
+    expect(expectedScore(1300, 1700)).toBeLessThan(0.5);
+  });
+
+  it("updateElo aumenta o rating de quem venceu e diminui o do perdedor", () => {
+    const result = updateElo({ eloHome: 1500, eloAway: 1500, homeGoals: 2, awayGoals: 0 });
+    expect(result.eloHome).toBeGreaterThan(1500);
+    expect(result.eloAway).toBeLessThan(1500);
+    // soma total de Elo se conserva (é só transferência de pontos)
+    expect(result.eloHome + result.eloAway).toBeCloseTo(3000, 5);
+  });
+
+  it("uma zebra (azarão vence) move o rating mais do que um resultado esperado", () => {
+    const upsetResult = updateElo({ eloHome: 1300, eloAway: 1700, homeGoals: 1, awayGoals: 0 });
+    const expectedResult = updateElo({ eloHome: 1700, eloAway: 1300, homeGoals: 1, awayGoals: 0 });
+    const upsetGain = upsetResult.eloHome - 1300;
+    const expectedGain = expectedResult.eloHome - 1700;
+    expect(upsetGain).toBeGreaterThan(expectedGain);
+  });
+
+  it("uma goleada move mais pontos do que uma vitória por 1 gol", () => {
+    const bigWin = updateElo({ eloHome: 1500, eloAway: 1500, homeGoals: 4, awayGoals: 0 });
+    const narrowWin = updateElo({ eloHome: 1500, eloAway: 1500, homeGoals: 1, awayGoals: 0 });
+    expect(bigWin.eloHome - 1500).toBeGreaterThan(narrowWin.eloHome - 1500);
   });
 });
 
 describe("calculateMatchBetScore - integração com bônus de dificuldade", () => {
   it("soma o bônus de dificuldade quando acerta a direção do resultado", () => {
-    const difficultyBonus = computeOutcomeDifficultyBonus(1, 20, 20); // {home:2, draw:4, away:8}
+    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1300); // {home:2, draw:4, away:8}
     // Palmeiras (mandante, favorito) vence por 2x0 - palpite acerta o saldo (6) mas não o placar exato
     const result = calculateMatchBetScore(
       { home: 3, away: 0 },
@@ -157,7 +200,7 @@ describe("calculateMatchBetScore - integração com bônus de dificuldade", () =
   });
 
   it("não soma bônus de dificuldade quando erra a direção do resultado", () => {
-    const difficultyBonus = computeOutcomeDifficultyBonus(1, 20, 20);
+    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1300);
     const result = calculateMatchBetScore(
       { home: 0, away: 1 }, // previu visitante vencendo
       { home: 2, away: 0 }, // mandante venceu
@@ -167,7 +210,7 @@ describe("calculateMatchBetScore - integração com bônus de dificuldade", () =
   });
 
   it("zebra (azarão vence) rende o maior bônus de dificuldade", () => {
-    const difficultyBonus = computeOutcomeDifficultyBonus(1, 20, 20);
+    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1300);
     const result = calculateMatchBetScore(
       { home: 0, away: 1 },
       { home: 0, away: 1 }, // lanterna (visitante) vence, zebra
