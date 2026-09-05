@@ -70,35 +70,45 @@ Cada partida tem um bônus (`home`/`draw`/`away`) calculado a partir do
 **rating de força (Elo)** dos dois times — não da posição na tabela
 (`computeOutcomeDifficultyBonus`, em `packages/scoring/src/difficultyBonus.ts`,
 usando `expectedScore` de `packages/scoring/src/elo.ts`). Reproduz o exemplo
-do enunciado — dois times com 400 pontos de diferença de Elo: favorito
-vencendo = +2, empate = +4, zebra (azarão vencendo) = +8.
+do enunciado — um time claramente mais forte que o outro: favorito vencendo
+= +2, empate = +4, zebra (azarão vencendo) = +8.
 
 Posição na tabela foi descartada de propósito: logo no início do campeonato,
 ela é um proxy ruim de dificuldade (poucos jogos, muito ruído). Dois
 candidatos ao título que se enfrentam cedo — um deles temporariamente mal
-posicionado — continuam tendo Elo parecido, então o bônus fica baixo, do
-jeito que uma casa de apostas precificaria esse jogo. Cada time começa com
-um Elo inicial (hoje, um placeholder de demonstração em `store.ts` — numa
-integração real valeria semear com o Elo final da temporada anterior) e ele
-evolui sozinho: toda vez que uma partida termina, `recordMatchResultForElo`
-atualiza o Elo dos dois times com base no resultado real (vitória, empate,
-derrota, e a diferença de gols conta — uma goleada move mais pontos que uma
-vitória de 1 gol). Isso afeta o bônus dos **próximos** jogos desses times; o
-bônus de uma partida que já começou nunca muda, como a linha de uma casa de
-apostas antes do apito inicial.
+posicionado — continuam tendo Elo parecido, então o jogo é tratado como o
+que realmente é: difícil de prever.
+
+**Importante: um jogo parelho não zera o bônus.** Times com Elo parecido
+ficam perto de um "piso" (4 de vitória / 3 de empate) em vez de caírem a
+zero — mesmo num confronto equilibrado, acertar o resultado tem seu mérito.
+Só nos extremos (um time claramente mais forte) o bônus se afasta desse piso
+até chegar em 2/4/8. Ou seja, quanto mais parelhos os times, mais próximos os
+três valores ficam entre si; quanto mais um deles domina, mais eles se
+espalham — do jeito que uma casa de apostas precifica um jogo. Exemplos reais
+do simulador: Palmeiras (muito mais forte) x Atlético-GO → 2/4/8; dois times
+parelhos → algo como 4/3/5; uma diferença média → 3/3/6.
+
+Cada time começa com um Elo inicial (hoje, um placeholder de demonstração em
+`store.ts` — numa integração real valeria semear com o Elo final da
+temporada anterior) e ele evolui sozinho: toda vez que uma partida termina,
+`recordMatchResultForElo` atualiza o Elo dos dois times com base no
+resultado real (vitória, empate, derrota, e a diferença de gols conta — uma
+goleada move mais pontos que uma vitória de 1 gol). Isso afeta o bônus dos
+**próximos** jogos desses times; o bônus de uma partida que já começou nunca
+muda, como a linha de uma casa de apostas antes do apito inicial.
 
 O bônus é somado **sempre que o participante acerta a direção do resultado**
 (vencedor certo ou empate certo), qualquer que seja a faixa fixa atingida —
-inclusive quando acertou só a direção (faixa "0 pontos fixos"). Times mais
-parelhos em força geram bônus menor/nulo.
+inclusive quando acertou só a direção (faixa "0 pontos fixos").
 
 > **Fórmula é um ponto de partida, não está fechada.** O enunciado só deu um
-> exemplo (2/4/8); a escala usada (`maxFavoriteBonus × força do favorito`,
-> empate = 2×, zebra = 4×) bate com esse exemplo, mas o valor máximo, o fator
-> K do Elo e a vantagem de jogar em casa são ajustáveis
-> (`computeOutcomeDifficultyBonus(..., { maxFavoriteBonus })` e os parâmetros
-> de `updateElo`). Vale revisar com dados reais do campeonato antes de travar
-> os valores.
+> exemplo (2/4/8) para um jogo bem desequilibrado; o piso de um jogo parelho
+> (4 de vitória / 3 de empate) e a vantagem de jogar em casa usada para
+> desempatar times com Elo idêntico (`homeAdvantage`, hoje 60 pontos de Elo)
+> são ajustáveis em `computeOutcomeDifficultyBonus(..., { baselineBonus,
+> baselineDrawBonus, extremeFavoriteBonus, homeAdvantage })`. Vale revisar
+> com dados reais do campeonato antes de travar os valores.
 
 ### Bônus de 4+ gols (soma, independente das faixas acima)
 

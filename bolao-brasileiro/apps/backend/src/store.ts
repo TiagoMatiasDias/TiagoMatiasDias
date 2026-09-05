@@ -71,7 +71,7 @@ const teamsById = new Map(teams.map((t) => [t.id, t]));
  * com o Elo final da temporada anterior.
  */
 const eloByTeamId = new Map<string, number>(
-  teams.map((team, index) => [team.id, DEFAULT_ELO + (9 - index) * 20])
+  teams.map((team, index) => [team.id, DEFAULT_ELO + (9 - index) * 22])
 );
 
 function difficultyBonusFor(homeTeamId: string, awayTeamId: string) {

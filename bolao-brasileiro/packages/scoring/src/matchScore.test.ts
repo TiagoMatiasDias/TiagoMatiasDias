@@ -127,28 +127,30 @@ describe("calculateMatchBetScore - bônus de 4+ gols", () => {
 });
 
 describe("computeOutcomeDifficultyBonus", () => {
-  it("reproduz o exemplo do enunciado com uma diferença de Elo de 400 pontos", () => {
-    const bonus = computeOutcomeDifficultyBonus(1700, 1300);
+  it("reproduz o exemplo do enunciado quando um time é um favorito quase absoluto", () => {
+    const bonus = computeOutcomeDifficultyBonus(1700, 1200);
     expect(bonus).toEqual({ home: 2, draw: 4, away: 8 });
   });
 
-  it("times com Elo igual não geram bônus (jogo equilibrado)", () => {
-    const bonus = computeOutcomeDifficultyBonus(1500, 1500);
-    expect(bonus).toEqual({ home: 0, draw: 0, away: 0 });
-  });
-
-  it("visitante favorito inverte os lados do bônus", () => {
-    const bonus = computeOutcomeDifficultyBonus(1300, 1700);
+  it("visitante favorito absoluto inverte os lados do bônus", () => {
+    const bonus = computeOutcomeDifficultyBonus(1150, 1750);
     expect(bonus).toEqual({ home: 8, draw: 4, away: 2 });
   });
 
-  it("dois favoritos ao título com Elo parecido geram bônus baixo, mesmo em posições opostas na tabela", () => {
+  it("jogo equilibrado (Elo igual) não zera o bônus — fica perto do baseline", () => {
+    // Mandante ainda sai como leve favorito "de boca de urna" só pelo mando
+    // de campo (ver homeAdvantage), mesmo com Elo idêntico.
+    const bonus = computeOutcomeDifficultyBonus(1500, 1500);
+    expect(bonus).toEqual({ home: 4, draw: 3, away: 5 });
+  });
+
+  it("dois favoritos ao título com Elo parecido geram bônus perto do baseline, mesmo em posições opostas na tabela", () => {
     // Cenário do enunciado: dois candidatos ao título se enfrentam cedo no
     // campeonato; um está em 1º e outro em último por causa de poucos jogos,
-    // mas a força real dos dois (Elo) é praticamente a mesma.
+    // mas a força real dos dois (Elo) é praticamente a mesma — o bônus deve
+    // ficar próximo do baseline (4/3/5), bem longe do extremo (2/4/8).
     const bonus = computeOutcomeDifficultyBonus(1620, 1600);
-    expect(bonus.home).toBeLessThanOrEqual(1);
-    expect(bonus.away).toBeLessThanOrEqual(1);
+    expect(bonus).toEqual({ home: 4, draw: 3, away: 5 });
   });
 });
 
@@ -187,7 +189,7 @@ describe("elo", () => {
 
 describe("calculateMatchBetScore - integração com bônus de dificuldade", () => {
   it("soma o bônus de dificuldade quando acerta a direção do resultado", () => {
-    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1300); // {home:2, draw:4, away:8}
+    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1200); // {home:2, draw:4, away:8}
     // Palmeiras (mandante, favorito) vence por 2x0 - palpite acerta o saldo (6) mas não o placar exato
     const result = calculateMatchBetScore(
       { home: 3, away: 0 },
@@ -200,7 +202,7 @@ describe("calculateMatchBetScore - integração com bônus de dificuldade", () =
   });
 
   it("não soma bônus de dificuldade quando erra a direção do resultado", () => {
-    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1300);
+    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1200);
     const result = calculateMatchBetScore(
       { home: 0, away: 1 }, // previu visitante vencendo
       { home: 2, away: 0 }, // mandante venceu
@@ -210,7 +212,7 @@ describe("calculateMatchBetScore - integração com bônus de dificuldade", () =
   });
 
   it("zebra (azarão vence) rende o maior bônus de dificuldade", () => {
-    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1300);
+    const difficultyBonus = computeOutcomeDifficultyBonus(1700, 1200);
     const result = calculateMatchBetScore(
       { home: 0, away: 1 },
       { home: 0, away: 1 }, // lanterna (visitante) vence, zebra
