@@ -56,10 +56,9 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Ainda existem, mas saem da barra por enquanto: "Ao Vivo" (index) e
-          "Perguntas" migram para dentro de Palpites na fase 2. */}
+      {/* "Ao Vivo" (index) ainda existe, mas fora da barra por enquanto —
+          "Perguntas" já migrou de vez pra dentro de Palpites (fase 2a). */}
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="perguntas" options={{ href: null }} />
     </Tabs>
   );
 }

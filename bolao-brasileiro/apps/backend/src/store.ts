@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { computeOutcomeDifficultyBonus, DEFAULT_ELO, updateElo } from "@bolao/scoring";
+import { generateDoubleRoundRobin } from "./fixtures/roundRobin.js";
 import type {
   Bet,
   Group,
@@ -63,8 +64,6 @@ export const teams: Team[] = CLUB_NAMES.map(([name, shortName], index) => {
   };
 });
 
-const teamsById = new Map(teams.map((t) => [t.id, t]));
-
 /**
  * Rating de força de cada time (ver `@bolao/scoring/elo`). Ao contrário da
  * posição na tabela, não reseta a cada rodada — evolui aos poucos conforme
@@ -105,29 +104,106 @@ export function recordMatchResultForElo(match: Match) {
   eloByTeamId.set(match.awayTeamId, updated.eloAway);
 }
 
-function makeMatch(round: number, homeTeamId: string, awayTeamId: string, hoursFromNow: number): Match {
-  return {
-    id: randomUUID(),
-    round,
-    kickoffAt: new Date(Date.now() + hoursFromNow * 60 * 60 * 1000).toISOString(),
-    status: hoursFromNow <= 0 ? "LIVE" : "SCHEDULED",
-    homeTeamId,
-    awayTeamId,
-    homeGoals: 0,
-    awayGoals: 0,
-    minute: hoursFromNow <= 0 ? 1 : 0,
-    difficultyBonus: difficultyBonusFor(homeTeamId, awayTeamId),
-  };
+/**
+ * Amostra de uma distribuição de Poisson (algoritmo de Knuth) — usada só
+ * para gerar placares plausíveis para as rodadas simuladas do calendário
+ * de demonstração (mais gols pra quem tem Elo mais alto, dentro do razoável
+ * pro futebol: média em torno de 1 a 2 gols por time).
+ */
+function poissonGoals(lambda: number): number {
+  const L = Math.exp(-lambda);
+  let k = 0;
+  let p = 1;
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
+  return k - 1;
 }
 
-export const matches: Match[] = [
-  makeMatch(21, "team-pal", "team-acg", 0), // líder x lanterna, ao vivo (exemplo do enunciado)
-  makeMatch(21, "team-fla", "team-bot", -0.2),
-  makeMatch(21, "team-cor", "team-sao", 2),
-  makeMatch(21, "team-int", "team-gre", 24),
-  makeMatch(21, "team-cru", "team-flu", 48),
-];
+function simulatedGoalsFor(eloFor: number, eloAgainst: number): number {
+  // Elo mais alto puxa a média de gols um pouco pra cima (e vice-versa),
+  // mantendo a média geral do futebol (~1.3 gols por time).
+  const lambda = Math.min(3, Math.max(0.5, 1.3 + (eloFor - eloAgainst) / 500));
+  return poissonGoals(lambda);
+}
 
+const ROUND_INTERVAL_DAYS = 7;
+/** Rodada "atual": as anteriores já aconteceram (FINISHED), as seguintes são futuras. */
+const CURRENT_ROUND = 21;
+
+// Espalha os 10 jogos de uma rodada ao longo de ~4 dias (sexta a segunda),
+// como uma rodada de futebol de verdade — evita 10 jogos todos na mesma
+// hora do mesmo dia.
+const ROUND_DAY_SPREAD = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3];
+const ROUND_HOUR_SPREAD = [16, 19, 11, 16, 18, 11, 16, 18, 20, 20];
+
+function kickoffFor(round: number, indexInRound: number, forcePast: boolean): Date {
+  if (forcePast) {
+    // Garante que o jogo escolhido pra abrir a rodada atual já esteja
+    // "rolando" quando o servidor sobe, sem depender de coincidência de horário.
+    return new Date(Date.now() - 5 * 60 * 1000);
+  }
+
+  const roundBaseDaysFromNow = (round - CURRENT_ROUND) * ROUND_INTERVAL_DAYS;
+  const dayOffset = ROUND_DAY_SPREAD[indexInRound % ROUND_DAY_SPREAD.length];
+  const hour = ROUND_HOUR_SPREAD[indexInRound % ROUND_HOUR_SPREAD.length];
+  // Na rodada atual, os outros jogos (que não o escolhido pra estar ao vivo)
+  // nunca podem cair "hoje ou antes" — senão o simulador os promoveria pra
+  // ao vivo sozinho assim que o servidor iniciasse.
+  const effectiveDayOffset = round === CURRENT_ROUND ? Math.max(dayOffset, 1) : dayOffset;
+
+  const kickoff = new Date(Date.now() + (roundBaseDaysFromNow + effectiveDayOffset) * 24 * 60 * 60 * 1000);
+  kickoff.setHours(hour, 0, 0, 0);
+  return kickoff;
+}
+
+function buildCalendar(): Match[] {
+  const fixturesByRound = generateDoubleRoundRobin(teams.map((t) => t.id));
+  const allMatches: Match[] = [];
+
+  fixturesByRound.forEach((fixtures, roundIndex) => {
+    const round = roundIndex + 1;
+
+    fixtures.forEach(({ homeTeamId, awayTeamId }, indexInRound) => {
+      const isPast = round < CURRENT_ROUND;
+      const isFirstOfCurrentRound = round === CURRENT_ROUND && indexInRound === 0;
+      const kickoffAt = kickoffFor(round, indexInRound, isFirstOfCurrentRound);
+      const difficultyBonus = difficultyBonusFor(homeTeamId, awayTeamId);
+
+      const match: Match = {
+        id: randomUUID(),
+        round,
+        kickoffAt: kickoffAt.toISOString(),
+        status: isPast ? "FINISHED" : isFirstOfCurrentRound ? "LIVE" : "SCHEDULED",
+        homeTeamId,
+        awayTeamId,
+        homeGoals: 0,
+        awayGoals: 0,
+        minute: isFirstOfCurrentRound ? 1 : 0,
+        difficultyBonus,
+      };
+
+      if (isPast) {
+        const homeElo = currentEloOf(homeTeamId);
+        const awayElo = currentEloOf(awayTeamId);
+        match.homeGoals = simulatedGoalsFor(homeElo, awayElo);
+        match.awayGoals = simulatedGoalsFor(awayElo, homeElo);
+        recordMatchResultForElo(match);
+      }
+
+      allMatches.push(match);
+    });
+  });
+
+  return allMatches;
+}
+
+function currentEloOf(teamId: string): number {
+  return eloByTeamId.get(teamId) ?? DEFAULT_ELO;
+}
+
+export const matches: Match[] = buildCalendar();
 export const matchesById = new Map(matches.map((m) => [m.id, m]));
 
 export interface StoredUser extends User {

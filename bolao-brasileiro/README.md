@@ -20,10 +20,10 @@ bolao-brasileiro/
 
 - **Mobile**: Expo Router (navegação por abas), TypeScript, tema escuro
   verde/dourado. Barra de navegação com 5 abas: **Ranking**, **Mata-Mata**,
-  **Palpites**, **Grupos** e **Menu** — este é o mapa final do redesign, mas
-  hoje só a fase 1 (Grupos + a própria barra) está construída de verdade;
-  Mata-Mata é um placeholder e Ranking/Palpites/Menu ainda são as telas
-  simples de antes do redesign (ver `## Redesign do app (em fases)` abaixo).
+  **Palpites**, **Grupos** e **Menu** — este é o mapa final do redesign;
+  Grupos e Palpites (rodadas 1-38) já estão na versão nova, Mata-Mata é um
+  placeholder e Ranking/Menu ainda são as telas simples de antes do redesign
+  (ver `## Redesign do app (em fases)` abaixo).
 - **Backend**: Express + Socket.IO. Hoje roda com um repositório **em
   memória** (`apps/backend/src/store.ts`) para não depender de um Postgres
   provisionado — inclui um simulador de partidas ao vivo
@@ -68,7 +68,9 @@ grupos/equipes). É grande demais pra construir de uma vez, então está sendo
 feito em fases, cada uma completa antes de passar pra próxima:
 
 1. **Grupos + nova barra de 5 abas** ✅ concluída — ver abaixo.
-2. Palpites (rodadas 1-38 + formulário de perguntas) — pendente.
+2. Palpites:
+   - **2a. Jogos (rodadas 1-38)** ✅ concluída — ver abaixo.
+   - 2b. Perguntas (formulário com as 17 perguntas ilustradas) — pendente.
 3. Ranking geral + telas de detalhe/gráficos — pendente.
 4. Ranking de Equipes + Ranking de Perguntas — pendente.
 5. Mata-Mata (motor de fases configurável pelo ADM) — pendente.
@@ -91,6 +93,38 @@ Rotas: `POST /groups`, `GET /groups`, `GET /groups/:id`, `POST /groups/join`
 (`apps/mobile/context/GroupsContext.tsx`) busca os grupos do usuário e a aba
 Grupos (`apps/mobile/app/(tabs)/grupos.tsx`) traz a lista + os modais de
 criar/entrar/detalhar grupo.
+
+### Palpites → Jogos (fase 2a)
+
+A aba Palpites agora tem duas seções no topo, **Jogos** e **Perguntas**
+(`apps/mobile/app/(tabs)/palpites.tsx`). Perguntas por enquanto é só a lista
+simples que já existia (fase 2b redesenha com as 17 perguntas ilustradas).
+
+Jogos mostra o calendário completo do campeonato: 20 times, returno (cada
+dupla se enfrenta 2x, casa e fora) = **38 rodadas de 10 jogos**, gerado
+algoritmicamente pelo método do círculo
+(`apps/backend/src/fixtures/roundRobin.ts`, `generateDoubleRoundRobin`) em
+vez de digitado partida por partida. Ao subir o servidor
+(`apps/backend/src/store.ts`, `buildCalendar`):
+
+- Rodadas 1-20 nascem `FINISHED`, com placares simulados (distribuição de
+  Poisson, puxada pelo Elo de cada time) — e cada resultado já atualiza o
+  Elo (`recordMatchResultForElo`) antes da rodada seguinte ser gerada, então
+  o bônus de dificuldade das rodadas seguintes reflete um Elo que já evoluiu
+  de verdade, não só a semente inicial.
+- Rodada 21 é a "atual": o primeiro jogo fica `LIVE` (o mesmo simulador de
+  gols de sempre), os outros 9 ficam `SCHEDULED`, espalhados ao longo de
+  ~4 dias (sexta a segunda, como uma rodada de futebol de verdade).
+- Rodadas 22-38 ficam `SCHEDULED`, uma por semana.
+
+No mobile, `RoundSelector` (`apps/mobile/components/RoundSelector.tsx`)
+lista as 38 rodadas com um check em quem já tem palpite em todos os jogos
+daquela rodada (calculado no cliente, comparando com `GET /bets`), e entra
+já selecionando a rodada atual (a menor rodada com algum jogo que não é
+`FINISHED`). `RoundGameCard` mostra escudo acima do nome do time, o placar
+final pra jogos encerrados, e uma pill "Palpite feito"/"Sem preenchimento"
+pra jogos agendados; tocar num jogo agendado abre `BetEditorModal` pra
+editar o palpite.
 
 ## Regras de pontuação implementadas (`packages/scoring`)
 
