@@ -133,34 +133,42 @@ A aba Palpites agora tem duas seções no topo, **Jogos** e **Perguntas**
 (`apps/mobile/app/(tabs)/palpites.tsx`). Perguntas por enquanto é só a lista
 simples que já existia (fase 2b redesenha com as 17 perguntas ilustradas).
 
-Jogos mostra o calendário completo do campeonato: os **20 clubes reais da
-Série A 2026** (os 16 que permaneceram da Série A 2025 + os 4 que subiram da
-Série B — Coritiba, Athletico-PR, Chapecoense e Clube do Remo — ver
-`apps/backend/src/store.ts`, `CLUB_NAMES`), com returno (cada dupla se
-enfrenta 2x, casa e fora) = **38 rodadas de 10 jogos**.
+Jogos mostra o calendário **real** do campeonato: os 20 clubes da Série A
+2026 e as 380 partidas oficiais (38 rodadas de 10 jogos, returno — cada
+dupla se enfrenta 2x, casa e fora), a partir da planilha oficial que o
+usuário forneceu
+(`apps/backend/src/fixtures/brasileirao2026.ts`, `REAL_FIXTURES_2026`).
+Isso inclui os **246 resultados já ocorridos de verdade** (rodadas 1-20,
+22-25 completas, mais 6 de 10 jogos da rodada 21) — nada de placar
+simulado. Alguns detalhes de como os dados foram extraídos e reconciliados:
 
-> **Só os times são reais — o calendário (quem joga contra quem em cada
-> rodada, e as datas) ainda é gerado algoritmicamente**, não é a tabela
-> oficial da CBF. Tentei buscar a tabela real, mas não consegui acesso
-> confiável a uma fonte com todas as 380 partidas rodada a rodada pra
-> transcrever com segurança (o acesso à internet neste ambiente está
-> bloqueado pra a maioria dos sites). Se você conseguir me passar a tabela
-> oficial (ex: exportar do site da CBF), eu troco o calendário gerado pelo
-> real. Por enquanto, o calendário é gerado pelo método do círculo
-> (`apps/backend/src/fixtures/roundRobin.ts`, `generateDoubleRoundRobin`),
-> que garante pelo menos que a estrutura seja válida (cada dupla se enfrenta
-> exatamente 2x, ninguém joga duas vezes na mesma rodada). Ao subir o
-> servidor (`apps/backend/src/store.ts`, `buildCalendar`):
+- A planilha guarda os placares como texto (`"3 - 0"`) só quando um dos
+  times fica em 0 — qualquer outro placar (ex: `"1 - 3"`) o Excel
+  "corrigiu" sozinho pra uma data (`1 de março`), porque interpretou como
+  dia/mês. Recuperamos o placar original de volta a partir do mês/dia da
+  data (`mês = gols do mandante`, `dia = gols do visitante`).
+- A rodada que estava "ao vivo" no momento em que a planilha foi gerada
+  (rodada 26, a única sem os times visitantes listados — só um placar de
+  odds) foi reconstruída por eliminação: como cada dupla de times só pode
+  se enfrentar 2x no campeonato, os 10 jogos que "faltavam" um adversário
+  batem exatamente com os 10 pares que só tinham aparecido 1x no resto do
+  calendário (a rodada 26 é o returno da rodada 7).
+- 4 jogos da rodada 21 apareciam como "PÓS" (adiados), sem placar.
 
-- Rodadas 1-20 nascem `FINISHED`, com placares simulados (distribuição de
-  Poisson, puxada pelo Elo de cada time) — e cada resultado já atualiza o
-  Elo (`recordMatchResultForElo`) antes da rodada seguinte ser gerada, então
-  o bônus de dificuldade das rodadas seguintes reflete um Elo que já evoluiu
-  de verdade, não só a semente inicial.
-- Rodada 21 é a "atual": o primeiro jogo fica `LIVE` (o mesmo simulador de
-  gols de sempre), os outros 9 ficam `SCHEDULED`, espalhados ao longo de
-  ~4 dias (sexta a segunda, como uma rodada de futebol de verdade).
-- Rodadas 22-38 ficam `SCHEDULED`, uma por semana.
+Ao subir o servidor (`apps/backend/src/store.ts`, `buildCalendar`):
+
+- Jogos com placar real viram `FINISHED` direto, e cada resultado atualiza
+  o Elo (`recordMatchResultForElo`) na ordem das rodadas — então o bônus de
+  dificuldade de qualquer jogo pendente reflete um Elo que já evoluiu de
+  verdade a partir dos resultados reais, não uma semente fixa.
+- Jogos sem placar cuja data real já passou (os 4 adiados da rodada 21 +
+  o que já tiver passado da rodada 26 até agora) são redistribuídos: o mais
+  antigo vira `LIVE` (pro simulador de gols de sempre ter o que simular),
+  os outros ficam `SCHEDULED` em horários seguros mais à frente — sem isso,
+  o simulador promoveria vários pra "ao vivo" de uma vez só assim que o
+  servidor subisse.
+- Os demais jogos futuros mantêm a data real da planilha (a rodada 38, por
+  exemplo, é 1-2 de dezembro de 2026, como no campeonato de verdade).
 
 No mobile, `RoundSelector` (`apps/mobile/components/RoundSelector.tsx`)
 lista as 38 rodadas com um check em quem já tem palpite em todos os jogos

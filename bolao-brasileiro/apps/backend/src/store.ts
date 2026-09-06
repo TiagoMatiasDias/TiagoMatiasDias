@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { computeOutcomeDifficultyBonus, DEFAULT_ELO, updateElo } from "@bolao/scoring";
-import { generateDoubleRoundRobin } from "./fixtures/roundRobin.js";
+import { REAL_FIXTURES_2026 } from "./fixtures/brasileirao2026.js";
 import type {
   Bet,
   Group,
@@ -113,102 +113,70 @@ export function recordMatchResultForElo(match: Match) {
 }
 
 /**
- * Amostra de uma distribuição de Poisson (algoritmo de Knuth) — usada só
- * para gerar placares plausíveis para as rodadas simuladas do calendário
- * de demonstração (mais gols pra quem tem Elo mais alto, dentro do razoável
- * pro futebol: média em torno de 1 a 2 gols por time).
+ * Jogos que, segundo o calendário real, já deveriam ter acontecido (data no
+ * passado) mas ainda não têm resultado registrado (adiados, ou é hoje e o
+ * usuário só nos passou o calendário, não o resultado ao vivo). Escolhemos
+ * um deles pra ficar "ao vivo" agora (pro simulador de gols ter o que
+ * simular) e empurramos os outros pra um horário seguro mais à frente — sem
+ * isso, o `MockLiveProvider` promoveria vários pra "ao vivo" de uma vez só
+ * assim que o servidor subisse, já que a data real deles já passou.
  */
-function poissonGoals(lambda: number): number {
-  const L = Math.exp(-lambda);
-  let k = 0;
-  let p = 1;
-  do {
-    k++;
-    p *= Math.random();
-  } while (p > L);
-  return k - 1;
-}
+function scheduleUpcomingMatches(pending: Match[], now: number): void {
+  const due = pending
+    .filter((m) => new Date(m.kickoffAt).getTime() <= now)
+    .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
 
-function simulatedGoalsFor(eloFor: number, eloAgainst: number): number {
-  // Elo mais alto puxa a média de gols um pouco pra cima (e vice-versa),
-  // mantendo a média geral do futebol (~1.3 gols por time).
-  const lambda = Math.min(3, Math.max(0.5, 1.3 + (eloFor - eloAgainst) / 500));
-  return poissonGoals(lambda);
-}
-
-const ROUND_INTERVAL_DAYS = 7;
-/** Rodada "atual": as anteriores já aconteceram (FINISHED), as seguintes são futuras. */
-const CURRENT_ROUND = 21;
-
-// Espalha os 10 jogos de uma rodada ao longo de ~4 dias (sexta a segunda),
-// como uma rodada de futebol de verdade — evita 10 jogos todos na mesma
-// hora do mesmo dia.
-const ROUND_DAY_SPREAD = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3];
-const ROUND_HOUR_SPREAD = [16, 19, 11, 16, 18, 11, 16, 18, 20, 20];
-
-function kickoffFor(round: number, indexInRound: number, forcePast: boolean): Date {
-  if (forcePast) {
-    // Garante que o jogo escolhido pra abrir a rodada atual já esteja
-    // "rolando" quando o servidor sobe, sem depender de coincidência de horário.
-    return new Date(Date.now() - 5 * 60 * 1000);
-  }
-
-  const roundBaseDaysFromNow = (round - CURRENT_ROUND) * ROUND_INTERVAL_DAYS;
-  const dayOffset = ROUND_DAY_SPREAD[indexInRound % ROUND_DAY_SPREAD.length];
-  const hour = ROUND_HOUR_SPREAD[indexInRound % ROUND_HOUR_SPREAD.length];
-  // Na rodada atual, os outros jogos (que não o escolhido pra estar ao vivo)
-  // nunca podem cair "hoje ou antes" — senão o simulador os promoveria pra
-  // ao vivo sozinho assim que o servidor iniciasse.
-  const effectiveDayOffset = round === CURRENT_ROUND ? Math.max(dayOffset, 1) : dayOffset;
-
-  const kickoff = new Date(Date.now() + (roundBaseDaysFromNow + effectiveDayOffset) * 24 * 60 * 60 * 1000);
-  kickoff.setHours(hour, 0, 0, 0);
-  return kickoff;
+  due.forEach((match, index) => {
+    if (index === 0) {
+      match.status = "LIVE";
+      match.minute = 1;
+      match.kickoffAt = new Date(now - 5 * 60 * 1000).toISOString();
+    } else {
+      match.kickoffAt = new Date(now + index * 3 * 60 * 60 * 1000).toISOString();
+    }
+  });
 }
 
 function buildCalendar(): Match[] {
-  const fixturesByRound = generateDoubleRoundRobin(teams.map((t) => t.id));
+  const now = Date.now();
   const allMatches: Match[] = [];
+  const pending: Match[] = [];
 
-  fixturesByRound.forEach((fixtures, roundIndex) => {
-    const round = roundIndex + 1;
+  const sortedFixtures = [...REAL_FIXTURES_2026].sort((a, b) => a.round - b.round);
 
-    fixtures.forEach(({ homeTeamId, awayTeamId }, indexInRound) => {
-      const isPast = round < CURRENT_ROUND;
-      const isFirstOfCurrentRound = round === CURRENT_ROUND && indexInRound === 0;
-      const kickoffAt = kickoffFor(round, indexInRound, isFirstOfCurrentRound);
-      const difficultyBonus = difficultyBonusFor(homeTeamId, awayTeamId);
+  for (const fixture of sortedFixtures) {
+    const homeTeamId = `team-${fixture.home}`;
+    const awayTeamId = `team-${fixture.away}`;
+    const played = fixture.homeGoals !== null && fixture.awayGoals !== null;
 
-      const match: Match = {
-        id: randomUUID(),
-        round,
-        kickoffAt: kickoffAt.toISOString(),
-        status: isPast ? "FINISHED" : isFirstOfCurrentRound ? "LIVE" : "SCHEDULED",
-        homeTeamId,
-        awayTeamId,
-        homeGoals: 0,
-        awayGoals: 0,
-        minute: isFirstOfCurrentRound ? 1 : 0,
-        difficultyBonus,
-      };
+    const match: Match = {
+      id: randomUUID(),
+      round: fixture.round,
+      kickoffAt: fixture.isoDate,
+      status: played ? "FINISHED" : "SCHEDULED",
+      homeTeamId,
+      awayTeamId,
+      homeGoals: fixture.homeGoals ?? 0,
+      awayGoals: fixture.awayGoals ?? 0,
+      minute: 0,
+      // Calculado com o Elo ANTES desse jogo — para os já encerrados isso
+      // reconstitui a "linha de aposta" da época; para os pendentes, é o
+      // bônus vigente até que outro jogo pendente termine.
+      difficultyBonus: difficultyBonusFor(homeTeamId, awayTeamId),
+    };
 
-      if (isPast) {
-        const homeElo = currentEloOf(homeTeamId);
-        const awayElo = currentEloOf(awayTeamId);
-        match.homeGoals = simulatedGoalsFor(homeElo, awayElo);
-        match.awayGoals = simulatedGoalsFor(awayElo, homeElo);
-        recordMatchResultForElo(match);
-      }
+    if (played) {
+      recordMatchResultForElo(match);
+    } else {
+      pending.push(match);
+    }
 
-      allMatches.push(match);
-    });
-  });
+    allMatches.push(match);
+  }
+
+  scheduleUpcomingMatches(pending, now);
 
   return allMatches;
-}
-
-function currentEloOf(teamId: string): number {
-  return eloByTeamId.get(teamId) ?? DEFAULT_ELO;
 }
 
 export const matches: Match[] = buildCalendar();
