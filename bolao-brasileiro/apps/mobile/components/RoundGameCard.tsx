@@ -62,13 +62,15 @@ export function RoundGameCard({ match, homeTeam, awayTeam, myBet, onPress }: Rou
             <Text style={styles.score}>
               {match.homeGoals} - {match.awayGoals}
             </Text>
+          ) : hasBet ? (
+            <View style={styles.betScoreBox}>
+              <Text style={styles.betScoreLabel}>seu palpite</Text>
+              <Text style={styles.betScore}>
+                {myBet.homeGoals} - {myBet.awayGoals}
+              </Text>
+            </View>
           ) : (
             <Text style={styles.vs}>vs</Text>
-          )}
-          {hasBet && isScheduled && (
-            <Text style={styles.betPreview}>
-              seu palpite: {myBet.homeGoals}-{myBet.awayGoals}
-            </Text>
           )}
         </View>
 
@@ -157,9 +159,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
   },
-  betPreview: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 2,
+  betScoreBox: {
+    alignItems: "center",
+  },
+  betScoreLabel: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  betScore: {
+    ...typography.heading,
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.primary,
   },
 });
