@@ -18,27 +18,35 @@ import type {
  * por Prisma (ver prisma/schema.prisma) é o próximo passo antes de produção.
  */
 
+/**
+ * Os 20 clubes confirmados na Série A 2026: os 16 que permaneceram da Série
+ * A 2025 (nesta ordem, a posição final de 2025 — melhor lá em cima) mais os
+ * 4 que subiram da Série B 2025 (Coritiba campeão, Athletico-PR,
+ * Chapecoense e Remo). Usar a posição de 2025 como ordem aqui só serve pra
+ * dar um ponto de partida razoável pro Elo inicial (`eloByTeamId` abaixo) —
+ * não é usada pra nada além disso.
+ */
 const CLUB_NAMES: Array<[string, string]> = [
-  ["Palmeiras", "PAL"],
   ["Flamengo", "FLA"],
-  ["Botafogo", "BOT"],
-  ["Fortaleza", "FOR"],
-  ["Internacional", "INT"],
-  ["Atlético-MG", "CAM"],
-  ["São Paulo", "SAO"],
-  ["Corinthians", "COR"],
+  ["Palmeiras", "PAL"],
   ["Cruzeiro", "CRU"],
-  ["Grêmio", "GRE"],
-  ["Bahia", "BAH"],
-  ["Vasco da Gama", "VAS"],
-  ["Athletico-PR", "CAP"],
+  ["Mirassol", "MIR"],
   ["Fluminense", "FLU"],
+  ["Botafogo", "BOT"],
+  ["Bahia", "BAH"],
+  ["São Paulo", "SAO"],
+  ["Grêmio", "GRE"],
   ["Bragantino", "BRA"],
-  ["Criciúma", "CRI"],
-  ["Cuiabá", "CUI"],
+  ["Atlético-MG", "CAM"],
+  ["Santos", "SAN"],
+  ["Corinthians", "COR"],
+  ["Vasco da Gama", "VAS"],
   ["Vitória", "VIT"],
-  ["Juventude", "JUV"],
-  ["Atlético-GO", "ACG"],
+  ["Internacional", "INT"],
+  ["Coritiba", "CFC"],
+  ["Athletico-PR", "CAP"],
+  ["Chapecoense", "CHA"],
+  ["Clube do Remo", "REM"],
 ];
 
 export const championshipId = "brasileirao-2026";

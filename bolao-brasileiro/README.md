@@ -72,16 +72,16 @@ escudos você mesmo, sem mexer em nenhum código:
 
    | Arquivo | Time | Arquivo | Time |
    |---|---|---|---|
-   | `pal.png` | Palmeiras | `bah.png` | Bahia |
-   | `fla.png` | Flamengo | `vas.png` | Vasco da Gama |
-   | `bot.png` | Botafogo | `cap.png` | Athletico-PR |
-   | `for.png` | Fortaleza | `flu.png` | Fluminense |
-   | `int.png` | Internacional | `bra.png` | Bragantino |
-   | `cam.png` | Atlético-MG | `cri.png` | Criciúma |
-   | `sao.png` | São Paulo | `cui.png` | Cuiabá |
-   | `cor.png` | Corinthians | `vit.png` | Vitória |
-   | `cru.png` | Cruzeiro | `juv.png` | Juventude |
-   | `gre.png` | Grêmio | `acg.png` | Atlético-GO |
+   | `fla.png` | Flamengo | `cam.png` | Atlético-MG |
+   | `pal.png` | Palmeiras | `san.png` | Santos |
+   | `cru.png` | Cruzeiro | `cor.png` | Corinthians |
+   | `mir.png` | Mirassol | `vas.png` | Vasco da Gama |
+   | `flu.png` | Fluminense | `vit.png` | Vitória |
+   | `bot.png` | Botafogo | `int.png` | Internacional |
+   | `bah.png` | Bahia | `cfc.png` | Coritiba |
+   | `sao.png` | São Paulo | `cap.png` | Athletico-PR |
+   | `gre.png` | Grêmio | `cha.png` | Chapecoense |
+   | `bra.png` | Bragantino | `rem.png` | Clube do Remo |
 
 3. Reinicie `pnpm mobile:start` (Ctrl+C e rode de novo) pra garantir que o
    Metro pegue o arquivo novo.
@@ -133,12 +133,24 @@ A aba Palpites agora tem duas seções no topo, **Jogos** e **Perguntas**
 (`apps/mobile/app/(tabs)/palpites.tsx`). Perguntas por enquanto é só a lista
 simples que já existia (fase 2b redesenha com as 17 perguntas ilustradas).
 
-Jogos mostra o calendário completo do campeonato: 20 times, returno (cada
-dupla se enfrenta 2x, casa e fora) = **38 rodadas de 10 jogos**, gerado
-algoritmicamente pelo método do círculo
-(`apps/backend/src/fixtures/roundRobin.ts`, `generateDoubleRoundRobin`) em
-vez de digitado partida por partida. Ao subir o servidor
-(`apps/backend/src/store.ts`, `buildCalendar`):
+Jogos mostra o calendário completo do campeonato: os **20 clubes reais da
+Série A 2026** (os 16 que permaneceram da Série A 2025 + os 4 que subiram da
+Série B — Coritiba, Athletico-PR, Chapecoense e Clube do Remo — ver
+`apps/backend/src/store.ts`, `CLUB_NAMES`), com returno (cada dupla se
+enfrenta 2x, casa e fora) = **38 rodadas de 10 jogos**.
+
+> **Só os times são reais — o calendário (quem joga contra quem em cada
+> rodada, e as datas) ainda é gerado algoritmicamente**, não é a tabela
+> oficial da CBF. Tentei buscar a tabela real, mas não consegui acesso
+> confiável a uma fonte com todas as 380 partidas rodada a rodada pra
+> transcrever com segurança (o acesso à internet neste ambiente está
+> bloqueado pra a maioria dos sites). Se você conseguir me passar a tabela
+> oficial (ex: exportar do site da CBF), eu troco o calendário gerado pelo
+> real. Por enquanto, o calendário é gerado pelo método do círculo
+> (`apps/backend/src/fixtures/roundRobin.ts`, `generateDoubleRoundRobin`),
+> que garante pelo menos que a estrutura seja válida (cada dupla se enfrenta
+> exatamente 2x, ninguém joga duas vezes na mesma rodada). Ao subir o
+> servidor (`apps/backend/src/store.ts`, `buildCalendar`):
 
 - Rodadas 1-20 nascem `FINISHED`, com placares simulados (distribuição de
   Poisson, puxada pelo Elo de cada time) — e cada resultado já atualiza o
