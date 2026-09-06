@@ -58,6 +58,39 @@ Testes do motor de pontuação:
 pnpm scoring:test
 ```
 
+## Escudos dos times
+
+O app não vem com os brasões oficiais dos 20 times (é imagem licenciada de
+cada clube — o mesmo motivo pelo qual as perguntas com jogador vão usar
+ilustração em vez de foto, na fase 2b). Em vez disso, dá pra subir os
+escudos você mesmo, sem mexer em nenhum código:
+
+1. Consiga o PNG do escudo de cada time (fundo transparente, quadrado,
+   uns 256×256px fica ótimo).
+2. Salve o arquivo em `apps/mobile/assets/images/teams/`, **substituindo**
+   o placeholder que já existe lá, com o nome exato (tudo minúsculo):
+
+   | Arquivo | Time | Arquivo | Time |
+   |---|---|---|---|
+   | `pal.png` | Palmeiras | `bah.png` | Bahia |
+   | `fla.png` | Flamengo | `vas.png` | Vasco da Gama |
+   | `bot.png` | Botafogo | `cap.png` | Athletico-PR |
+   | `for.png` | Fortaleza | `flu.png` | Fluminense |
+   | `int.png` | Internacional | `bra.png` | Bragantino |
+   | `cam.png` | Atlético-MG | `cri.png` | Criciúma |
+   | `sao.png` | São Paulo | `cui.png` | Cuiabá |
+   | `cor.png` | Corinthians | `vit.png` | Vitória |
+   | `cru.png` | Cruzeiro | `juv.png` | Juventude |
+   | `gre.png` | Grêmio | `acg.png` | Atlético-GO |
+
+3. Reinicie `pnpm mobile:start` (Ctrl+C e rode de novo) pra garantir que o
+   Metro pegue o arquivo novo.
+
+Pode fazer time por time, sem pressa — os times que ainda não têm arquivo
+de verdade continuam mostrando o escudo estilizado (a silhueta colorida com
+a sigla) normalmente. A lista de arquivos fica em
+`apps/mobile/constants/teamCrests.ts`.
+
 ## Redesign do app (em fases)
 
 O app está sendo redesenhado para a estrutura final de 5 abas (Ranking,
