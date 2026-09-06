@@ -75,6 +75,28 @@ export interface LongTermAnswer {
   points?: number;
 }
 
+export type GroupIcon = "trophy" | "ball" | "medal" | "flag";
+
+export interface Group {
+  id: string;
+  name: string;
+  icon: GroupIcon;
+  inviteCode: string;
+  adminUserId: string;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface GroupMember {
+  id: string;
+  groupId: string;
+  userId: string;
+  userName: string;
+  avatarUrl?: string;
+  role: "ADMIN" | "MEMBER";
+  joinedAt: string;
+}
+
 export interface LeaderboardEntry {
   userId: string;
   userName: string;
@@ -92,5 +114,5 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   "subscribe:match": (matchId: string) => void;
-  "subscribe:leaderboard": (poolId: string | null) => void;
+  "subscribe:leaderboard": (groupId: string | null) => void;
 }

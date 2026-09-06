@@ -25,7 +25,7 @@ export default function BetsScreen() {
       <ScreenContainer style={styles.centered}>
         <Text style={styles.emptyTitle}>Faça login para dar seus palpites</Text>
         <Text style={styles.emptySubtitle}>
-          Vá até a aba Perfil para entrar na sua conta.
+          Vá até a aba Menu para entrar na sua conta.
         </Text>
       </ScreenContainer>
     );

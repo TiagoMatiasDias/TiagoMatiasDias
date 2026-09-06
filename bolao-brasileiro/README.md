@@ -19,7 +19,11 @@ bolao-brasileiro/
 ```
 
 - **Mobile**: Expo Router (navegação por abas), TypeScript, tema escuro
-  verde/dourado. Telas: Ao Vivo, Palpites, Ranking, Perguntas, Perfil.
+  verde/dourado. Barra de navegação com 5 abas: **Ranking**, **Mata-Mata**,
+  **Palpites**, **Grupos** e **Menu** — este é o mapa final do redesign, mas
+  hoje só a fase 1 (Grupos + a própria barra) está construída de verdade;
+  Mata-Mata é um placeholder e Ranking/Palpites/Menu ainda são as telas
+  simples de antes do redesign (ver `## Redesign do app (em fases)` abaixo).
 - **Backend**: Express + Socket.IO. Hoje roda com um repositório **em
   memória** (`apps/backend/src/store.ts`) para não depender de um Postgres
   provisionado — inclui um simulador de partidas ao vivo
@@ -44,13 +48,49 @@ pnpm backend:dev
 pnpm mobile:start
 ```
 
-Login de demonstração: `tiagomatiasdias@hotmail.com` / senha `bolao123`.
+Login de demonstração: `tiagomatiasdias@hotmail.com` / senha `bolao123`
+(existe um segundo usuário demo, `maria@exemplo.com` / mesma senha, útil para
+testar convite/entrada em grupo com dois usuários).
 
 Testes do motor de pontuação:
 
 ```bash
 pnpm scoring:test
 ```
+
+## Redesign do app (em fases)
+
+O app está sendo redesenhado para a estrutura final de 5 abas (Ranking,
+Mata-Mata, Palpites, Grupos, Menu), cada uma com telas bem mais profundas do
+que as atuais (rankings por grupo, gráficos de histórico, motor de
+mata-mata configurável, formulário de perguntas ilustrado, gestão de
+grupos/equipes). É grande demais pra construir de uma vez, então está sendo
+feito em fases, cada uma completa antes de passar pra próxima:
+
+1. **Grupos + nova barra de 5 abas** ✅ concluída — ver abaixo.
+2. Palpites (rodadas 1-38 + formulário de perguntas) — pendente.
+3. Ranking geral + telas de detalhe/gráficos — pendente.
+4. Ranking de Equipes + Ranking de Perguntas — pendente.
+5. Mata-Mata (motor de fases configurável pelo ADM) — pendente.
+6. Menu (perfil, tema claro, notificações, regras) — pendente.
+
+### Grupos (fase 1)
+
+Qualquer usuário pode criar um grupo (nome + ícone: troféu, bola, medalha ou
+bandeira) e vira automaticamente o `ADMIN` dele; um código de convite de 6
+caracteres é gerado na hora (`apps/backend/src/store.ts`,
+`generateInviteCode`). Outros usuários entram no grupo com
+`POST /groups/join` usando esse código. Isso é a base para as fases
+seguintes: o Ranking (fase 3/4) e o Mata-Mata (fase 5) vão ser sempre
+escopados por grupo — se o usuário estiver em mais de um grupo, um seletor
+no topo dessas telas deixa trocar o grupo ativo (a implementar nas
+respectivas fases).
+
+Rotas: `POST /groups`, `GET /groups`, `GET /groups/:id`, `POST /groups/join`
+(`apps/backend/src/routes/groups.ts`). No mobile, `GroupsContext`
+(`apps/mobile/context/GroupsContext.tsx`) busca os grupos do usuário e a aba
+Grupos (`apps/mobile/app/(tabs)/grupos.tsx`) traz a lista + os modais de
+criar/entrar/detalhar grupo.
 
 ## Regras de pontuação implementadas (`packages/scoring`)
 

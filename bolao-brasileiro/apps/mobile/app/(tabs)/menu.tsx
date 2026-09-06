@@ -7,7 +7,7 @@ import { colors, radius, spacing, typography } from "../../constants/theme";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 
-export default function ProfileScreen() {
+export default function MenuScreen() {
   const { user, login, logout } = useAuth();
   const [email, setEmail] = useState("tiagomatiasdias@hotmail.com");
   const [password, setPassword] = useState("");
@@ -32,6 +32,7 @@ export default function ProfileScreen() {
         <TeamBadge shortName={user.name} size={72} />
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.email}>{user.email}</Text>
+        {/* Editar perfil, tema claro, notificações e regras chegam na fase 6. */}
         <PrimaryButton label="Sair" onPress={logout} variant="outline" style={styles.logoutButton} />
       </ScreenContainer>
     );

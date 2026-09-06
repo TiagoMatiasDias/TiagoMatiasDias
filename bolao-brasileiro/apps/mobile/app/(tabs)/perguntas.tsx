@@ -43,7 +43,7 @@ export default function LongTermQuestionsScreen() {
               Valem pontos extra ao final do campeonato
             </Text>
             {!token && (
-              <Text style={styles.loginNote}>Faça login na aba Perfil para responder.</Text>
+              <Text style={styles.loginNote}>Faça login na aba Menu para responder.</Text>
             )}
           </View>
         }

@@ -1,6 +1,9 @@
 import Constants from "expo-constants";
 import type {
   Bet,
+  Group,
+  GroupIcon,
+  GroupMember,
   LeaderboardEntry,
   LongTermAnswer,
   LongTermQuestion,
@@ -73,6 +76,17 @@ export const api = {
     }),
 
   getLeaderboard: () => request<{ entries: LeaderboardEntry[] }>("/leaderboard"),
+
+  listGroups: (token: string) => request<{ groups: Group[] }>("/groups", { token }),
+
+  createGroup: (token: string, name: string, icon: GroupIcon) =>
+    request<{ group: Group }>("/groups", { method: "POST", token, body: { name, icon } }),
+
+  joinGroup: (token: string, inviteCode: string) =>
+    request<{ group: Group }>("/groups/join", { method: "POST", token, body: { inviteCode } }),
+
+  getGroup: (token: string, groupId: string) =>
+    request<{ group: Group; members: GroupMember[] }>(`/groups/${groupId}`, { token }),
 };
 
 export { ApiError };

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { computeOutcomeDifficultyBonus, DEFAULT_ELO, updateElo } from "@bolao/scoring";
 import type {
   Bet,
+  Group,
+  GroupMember,
   LongTermAnswer,
   LongTermQuestion,
   Match,
@@ -142,10 +144,96 @@ export const users: StoredUser[] = [
     email: "tiagomatiasdias@hotmail.com",
     passwordHash: DEMO_PASSWORD_HASH,
   },
+  {
+    id: "user-demo-2",
+    name: "Maria",
+    email: "maria@exemplo.com",
+    passwordHash: DEMO_PASSWORD_HASH, // mesma senha de demo: "bolao123"
+  },
 ];
 
 export const bets: Bet[] = [];
 export const betsById = new Map<string, Bet>();
+
+export const groups: Group[] = [];
+export const groupMembers: GroupMember[] = [];
+
+const INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem I/O/0/1, evita confusão
+
+function generateInviteCode(): string {
+  let code: string;
+  do {
+    code = Array.from({ length: 6 }, () =>
+      INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)]
+    ).join("");
+  } while (groups.some((g) => g.inviteCode === code));
+  return code;
+}
+
+export function createGroup(name: string, icon: Group["icon"], adminUserId: string): Group {
+  const group: Group = {
+    id: randomUUID(),
+    name,
+    icon,
+    inviteCode: generateInviteCode(),
+    adminUserId,
+    memberCount: 1,
+    createdAt: new Date().toISOString(),
+  };
+  groups.push(group);
+
+  const admin = users.find((u) => u.id === adminUserId)!;
+  groupMembers.push({
+    id: randomUUID(),
+    groupId: group.id,
+    userId: admin.id,
+    userName: admin.name,
+    avatarUrl: admin.avatarUrl,
+    role: "ADMIN",
+    joinedAt: group.createdAt,
+  });
+
+  return group;
+}
+
+export function joinGroupByInviteCode(inviteCode: string, userId: string): Group | null {
+  const group = groups.find((g) => g.inviteCode === inviteCode.toUpperCase());
+  if (!group) return null;
+
+  const alreadyMember = groupMembers.some(
+    (m) => m.groupId === group.id && m.userId === userId
+  );
+  if (alreadyMember) return group;
+
+  const user = users.find((u) => u.id === userId)!;
+  groupMembers.push({
+    id: randomUUID(),
+    groupId: group.id,
+    userId: user.id,
+    userName: user.name,
+    avatarUrl: user.avatarUrl,
+    role: "MEMBER",
+    joinedAt: new Date().toISOString(),
+  });
+  group.memberCount += 1;
+
+  return group;
+}
+
+export function groupsForUser(userId: string): Group[] {
+  const groupIds = new Set(
+    groupMembers.filter((m) => m.userId === userId).map((m) => m.groupId)
+  );
+  return groups.filter((g) => groupIds.has(g.id));
+}
+
+export function membersOfGroup(groupId: string): GroupMember[] {
+  return groupMembers.filter((m) => m.groupId === groupId);
+}
+
+export function isGroupMember(groupId: string, userId: string): boolean {
+  return groupMembers.some((m) => m.groupId === groupId && m.userId === userId);
+}
 
 export const longTermQuestions: LongTermQuestion[] = [
   {

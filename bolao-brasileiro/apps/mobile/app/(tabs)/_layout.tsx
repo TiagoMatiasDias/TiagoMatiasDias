@@ -5,6 +5,7 @@ import { colors } from "../../constants/theme";
 export default function TabsLayout() {
   return (
     <Tabs
+      initialRouteName="ranking"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -16,10 +17,19 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="ranking"
         options={{
-          title: "Ao Vivo",
-          tabBarIcon: ({ color, size }) => <Ionicons name="football" color={color} size={size} />,
+          title: "Ranking",
+          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="mata-mata"
+        options={{
+          title: "Mata-Mata",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="git-branch" color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -32,28 +42,24 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="ranking"
+        name="grupos"
         options={{
-          title: "Ranking",
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" color={color} size={size} />,
+          title: "Grupos",
+          tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="perguntas"
+        name="menu"
         options={{
-          title: "Perguntas",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="help-circle" color={color} size={size} />
-          ),
+          title: "Menu",
+          tabBarIcon: ({ color, size }) => <Ionicons name="menu" color={color} size={size} />,
         }}
       />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          title: "Perfil",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" color={color} size={size} />,
-        }}
-      />
+
+      {/* Ainda existem, mas saem da barra por enquanto: "Ao Vivo" (index) e
+          "Perguntas" migram para dentro de Palpites na fase 2. */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="perguntas" options={{ href: null }} />
     </Tabs>
   );
 }

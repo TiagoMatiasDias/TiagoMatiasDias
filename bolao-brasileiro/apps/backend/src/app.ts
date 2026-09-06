@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { authRouter } from "./routes/auth.js";
 import { betsRouter } from "./routes/bets.js";
+import { groupsRouter } from "./routes/groups.js";
 import { leaderboardRouter } from "./routes/leaderboard.js";
 import { longTermRouter } from "./routes/longterm.js";
 import { matchesRouter } from "./routes/matches.js";
@@ -20,6 +21,7 @@ export function createApp() {
   app.use("/bets", betsRouter);
   app.use("/longterm", longTermRouter);
   app.use("/leaderboard", leaderboardRouter);
+  app.use("/groups", groupsRouter);
 
   return app;
 }

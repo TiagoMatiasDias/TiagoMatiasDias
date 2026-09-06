@@ -21,7 +21,7 @@ model User {
   createdAt       DateTime         @default(now())
   bets            Bet[]
   longTermAnswers LongTermAnswer[]
-  poolMemberships PoolMember[]
+  groupMemberships GroupMember[]
 }
 
 model Championship {
@@ -31,7 +31,7 @@ model Championship {
   teams             Team[]
   matches           Match[]
   longTermQuestions LongTermQuestion[]
-  pools             Pool[]
+  groups            Group[]
 }
 
 model Team {
@@ -109,26 +109,29 @@ model MatchEvent {
   createdAt DateTime       @default(now())
 }
 
-model Pool {
-  id             String       @id @default(uuid())
+model Group {
+  id             String        @id @default(uuid())
   name           String
-  inviteCode     String       @unique
+  icon           String
+  inviteCode     String        @unique
+  adminUserId    String
   championshipId String
-  championship   Championship @relation(fields: [championshipId], references: [id])
-  members        PoolMember[]
-  createdAt      DateTime     @default(now())
+  championship   Championship  @relation(fields: [championshipId], references: [id])
+  members        GroupMember[]
+  bets           Bet[]
+  createdAt      DateTime      @default(now())
 }
 
-model PoolMember {
+model GroupMember {
   id       String   @id @default(uuid())
-  poolId   String
-  pool     Pool     @relation(fields: [poolId], references: [id])
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id])
   userId   String
   user     User     @relation(fields: [userId], references: [id])
   role     String   @default("MEMBER")
   joinedAt DateTime @default(now())
 
-  @@unique([poolId, userId])
+  @@unique([groupId, userId])
 }
 
 model Bet {
@@ -137,7 +140,8 @@ model Bet {
   user                   User     @relation(fields: [userId], references: [id])
   matchId                String
   match                  Match    @relation(fields: [matchId], references: [id])
-  poolId                 String?
+  groupId                String?
+  group                  Group?   @relation(fields: [groupId], references: [id])
   homeGoals              Int
   awayGoals              Int
   fixedPoints            Int?
@@ -147,7 +151,7 @@ model Bet {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  @@unique([userId, matchId, poolId])
+  @@unique([userId, matchId, groupId])
 }
 
 model LongTermQuestion {
