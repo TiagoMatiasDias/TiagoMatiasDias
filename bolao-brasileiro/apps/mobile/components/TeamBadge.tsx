@@ -32,7 +32,11 @@ export function TeamBadge({ shortName, size = 36 }: { shortName: string; size?: 
         {shortName.slice(0, 3).toUpperCase()}
       </Text>
       {crest && (
-        <Image source={crest} resizeMode="contain" style={StyleSheet.absoluteFill} />
+        <Image
+          source={crest}
+          resizeMode="contain"
+          style={[StyleSheet.absoluteFill, { width: size, height: size }]}
+        />
       )}
     </View>
   );
@@ -42,6 +46,8 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
   },
   text: {
     fontWeight: "800",
